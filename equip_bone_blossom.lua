@@ -4,7 +4,14 @@ local LocalPlayer = Players.LocalPlayer
 local Backpack = LocalPlayer:WaitForChild("Backpack")
 local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 
-function getNil(name,class) for _,v in pairs(getnilinstances())do if v.ClassName==class and v.Name==name then return v;end end end
+function getNil(name,class) 
+    for _,v in pairs(getnilinstances()) do 
+        if v.ClassName==class and v.Name==name then 
+            return v
+        end 
+    end 
+    return nil -- Explícitamente retornar nil si no se encuentra
+end
 
 -- Variable para controlar el skip cooking
 local skipCooking = true
@@ -14,22 +21,32 @@ local function collectPlantFromWorld(plantName)
     local success, err = pcall(function()
         if plantName == "Bone Blossom" then
             -- Usar getNil para encontrar Bone Blossom
-            local args = {
-                [1] = {
-                    [1] = getNil("Bone Blossom", "Model")
+            local plantModel = getNil("Bone Blossom", "Model")
+            if plantModel then
+                local args = {
+                    [1] = {
+                        [1] = plantModel
+                    }
                 }
-            }
-            game:GetService("ReplicatedStorage").GameEvents.Crops.Collect:FireServer(unpack(args))
-            print("Recolectando Bone Blossom usando getNil...")
+                game:GetService("ReplicatedStorage").GameEvents.Crops.Collect:FireServer(unpack(args))
+                print("Recolectando Bone Blossom usando getNil...")
+            else
+                print("No se encontró Bone Blossom en el mundo")
+            end
         elseif plantName == "Tomato" then
             -- Usar getNil para encontrar Tomato
-            local args = {
-                [1] = {
-                    [1] = getNil("Tomato", "Model")
+            local plantModel = getNil("Tomato", "Model")
+            if plantModel then
+                local args = {
+                    [1] = {
+                        [1] = plantModel
+                    }
                 }
-            }
-            game:GetService("ReplicatedStorage").GameEvents.Crops.Collect:FireServer(unpack(args))
-            print("Recolectando Tomato usando getNil...")
+                game:GetService("ReplicatedStorage").GameEvents.Crops.Collect:FireServer(unpack(args))
+                print("Recolectando Tomato usando getNil...")
+            else
+                print("No se encontró Tomato en el mundo")
+            end
         end
     end)
     if not success then
