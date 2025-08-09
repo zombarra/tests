@@ -34,13 +34,19 @@ local function collectPlantFromWorld(plantName)
     end
 end
 
--- Función para equipar y submitir planta (versión simplificada que funcionaba)
+-- Función para equipar y submitir planta
 local function equipAndSubmitPlant(plantName, times)
     for i = 1, times do
         print("Buscando " .. plantName .. " (" .. i .. "/" .. times .. ")")
         local plantFound = false
-        -- Buscar hasta encontrar la planta especificada (sin límite de intentos)
-        while not plantFound do
+        local attempts = 0
+        local maxAttempts = 10 -- Límite de intentos para evitar bucle infinito
+        
+        -- Buscar hasta encontrar la planta especificada (con límite de intentos)
+        while not plantFound and attempts < maxAttempts do
+            attempts = attempts + 1
+            print("Intento " .. attempts .. "/" .. maxAttempts .. " para " .. plantName)
+            
             -- Buscar en el inventario
             for _, tool in ipairs(Backpack:GetChildren()) do
                 if tool:IsA("Tool") and tool:GetAttribute("f") == plantName and not tool:GetAttribute("Seed") then
@@ -66,11 +72,26 @@ local function equipAndSubmitPlant(plantName, times)
                     break
                 end
             end
+            
             if not plantFound then
-                print("No se encontró " .. plantName .. " en inventario, intentando recolectar...")
+                print("No se encontró " .. plantName .. " en inventario, intentando recolectar... (Intento " .. attempts .. ")")
                 collectPlantFromWorld(plantName)
                 task.wait(2) -- Esperar 2 segundos antes de buscar nuevamente
+                
+                -- Verificar si realmente se recolectó algo
+                local plantsInInventory = countPlantsInInventory(plantName)
+                print("Plantas " .. plantName .. " en inventario después de recolectar: " .. plantsInInventory)
+                
+                if plantsInInventory == 0 and attempts >= 3 then
+                    print("ADVERTENCIA: No se pueden recolectar " .. plantName .. " del mundo después de " .. attempts .. " intentos")
+                end
             end
+        end
+        
+        if not plantFound then
+            print("ERROR: No se pudo obtener " .. plantName .. " después de " .. maxAttempts .. " intentos")
+            print("Continuando con la siguiente iteración...")
+            break -- Salir del bucle para evitar quedarse atascado
         end
     end
 end
@@ -92,24 +113,50 @@ local function ensureInventoryStock()
     local boneBlossomsCount = countPlantsInInventory("Bone Blossom")
     print("Bone Blossoms en inventario: " .. boneBlossomsCount .. "/4")
     
-    while boneBlossomsCount < 4 do
-        print("Recolectando Bone Blossom adicional (" .. boneBlossomsCount .. "/4)")
+    local attempts = 0
+    local maxAttempts = 5
+    
+    while boneBlossomsCount < 4 and attempts < maxAttempts do
+        attempts = attempts + 1
+        print("Recolectando Bone Blossom adicional (" .. boneBlossomsCount .. "/4) - Intento " .. attempts)
         collectPlantFromWorld("Bone Blossom")
         task.wait(2)
-        boneBlossomsCount = countPlantsInInventory("Bone Blossom")
+        local newCount = countPlantsInInventory("Bone Blossom")
+        
+        if newCount == boneBlossomsCount then
+            print("ADVERTENCIA: No se recolectaron nuevas Bone Blossom en el intento " .. attempts)
+        end
+        
+        boneBlossomsCount = newCount
+    end
+    
+    if boneBlossomsCount < 4 then
+        print("ADVERTENCIA: Solo se obtuvieron " .. boneBlossomsCount .. "/4 Bone Blossom")
     end
     
     local tomatoCount = countPlantsInInventory("Tomato")
     print("Tomatos en inventario: " .. tomatoCount .. "/1")
     
-    while tomatoCount < 1 do
-        print("Recolectando Tomato adicional (" .. tomatoCount .. "/1)")
+    attempts = 0
+    while tomatoCount < 1 and attempts < maxAttempts do
+        attempts = attempts + 1
+        print("Recolectando Tomato adicional (" .. tomatoCount .. "/1) - Intento " .. attempts)
         collectPlantFromWorld("Tomato")
         task.wait(2)
-        tomatoCount = countPlantsInInventory("Tomato")
+        local newCount = countPlantsInInventory("Tomato")
+        
+        if newCount == tomatoCount then
+            print("ADVERTENCIA: No se recolectaron nuevos Tomato en el intento " .. attempts)
+        end
+        
+        tomatoCount = newCount
     end
     
-    print("Inventario verificado: " .. countPlantsInInventory("Bone Blossom") .. " Bone Blossoms, " .. countPlantsInInventory("Tomato") .. " Tomatos")
+    if tomatoCount < 1 then
+        print("ADVERTENCIA: No se obtuvieron Tomatos")
+    end
+    
+    print("Inventario final: " .. countPlantsInInventory("Bone Blossom") .. " Bone Blossoms, " .. countPlantsInInventory("Tomato") .. " Tomatos")
 end
 -- Función para obtener comida de la olla constantemente (con control de frecuencia)
 local function getFoodFromPotConstantly()
