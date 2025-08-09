@@ -27,21 +27,55 @@ task.spawn(getFoodLoop)
 local function collectPlantFromWorld(plantName)
     local success, err = pcall(function()
         if plantName == "Bone Blossom" then
-            local args = {
-                [1] = {
-                    [1] = workspace.Farm.Farm.Important.Plants_Physical:FindFirstChild("Bone Blossom").Fruits:FindFirstChild("Bone Blossom")
-                }
-            }
-            game:GetService("ReplicatedStorage").GameEvents.Crops.Collect:FireServer(unpack(args))
-            print("Recolectando Bone Blossom...")
+            -- Buscar cualquier Bone Blossom disponible, no solo el primero
+            local plantsContainer = workspace.Farm.Farm.Important.Plants_Physical:FindFirstChild("Bone Blossom")
+            if plantsContainer and plantsContainer.Fruits then
+                local availablePlants = {}
+                for _, plant in ipairs(plantsContainer.Fruits:GetChildren()) do
+                    if plant.Name == "Bone Blossom" then
+                        table.insert(availablePlants, plant)
+                    end
+                end
+                
+                if #availablePlants > 0 then
+                    -- Tomar una planta aleatoria de las disponibles
+                    local randomPlant = availablePlants[math.random(1, #availablePlants)]
+                    local args = {
+                        [1] = {
+                            [1] = randomPlant
+                        }
+                    }
+                    game:GetService("ReplicatedStorage").GameEvents.Crops.Collect:FireServer(unpack(args))
+                    print("Recolectando Bone Blossom (planta #" .. math.random(1, #availablePlants) .. " de " .. #availablePlants .. " disponibles)...")
+                else
+                    print("No hay Bone Blossoms disponibles para recolectar")
+                end
+            end
         elseif plantName == "Tomato" then
-            local args = {
-                [1] = {
-                    [1] = workspace.Farm.Farm.Important.Plants_Physical.Tomato.Fruits.Tomato
-                }
-            }
-            game:GetService("ReplicatedStorage").GameEvents.Crops.Collect:FireServer(unpack(args))
-            print("Recolectando Tomato...")
+            -- Buscar cualquier Tomato disponible
+            local plantsContainer = workspace.Farm.Farm.Important.Plants_Physical.Tomato
+            if plantsContainer and plantsContainer.Fruits then
+                local availableTomatoes = {}
+                for _, tomato in ipairs(plantsContainer.Fruits:GetChildren()) do
+                    if tomato.Name == "Tomato" then
+                        table.insert(availableTomatoes, tomato)
+                    end
+                end
+                
+                if #availableTomatoes > 0 then
+                    -- Tomar un tomate aleatorio de los disponibles
+                    local randomTomato = availableTomatoes[math.random(1, #availableTomatoes)]
+                    local args = {
+                        [1] = {
+                            [1] = randomTomato
+                        }
+                    }
+                    game:GetService("ReplicatedStorage").GameEvents.Crops.Collect:FireServer(unpack(args))
+                    print("Recolectando Tomato (tomate #" .. math.random(1, #availableTomatoes) .. " de " .. #availableTomatoes .. " disponibles)...")
+                else
+                    print("No hay Tomatos disponibles para recolectar")
+                end
+            end
         end
     end)
     if not success then
