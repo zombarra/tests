@@ -163,6 +163,16 @@ local iteration = 1
 while true do
     print("Iniciando iteración #" .. iteration)
     
+    -- PASO 0: RECOLECTAR PLANTAS AL INICIO DE CADA ITERACIÓN
+    print("=== RECOLECTANDO PLANTAS DEL MUNDO ===")
+    print("Recolectando Bone Blossom del mundo...")
+    collectPlantFromWorld("Bone Blossom")
+    task.wait(1)
+    print("Recolectando Tomato del mundo...")
+    collectPlantFromWorld("Tomato")
+    task.wait(1)
+    print("=== RECOLECCIÓN COMPLETADA ===")
+    
     -- PASO 1: Subir las 4 Bone Blossom PRIMERO
     print("=== SUBIENDO 4 BONE BLOSSOM PRIMERO ===")
     equipAndSubmitPlant("Bone Blossom", 4)
