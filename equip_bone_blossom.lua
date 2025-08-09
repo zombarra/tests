@@ -4,6 +4,29 @@ local LocalPlayer = Players.LocalPlayer
 local Backpack = LocalPlayer:WaitForChild("Backpack")
 local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 local skipCooking = true
+
+-- Variable para controlar el bucle de obtener comida
+local getFoodEnabled = true
+
+-- Función para obtener comida del pot constantemente
+local function getFoodFromPotLoop()
+    while getFoodEnabled do
+        local success, err = pcall(function()
+            local args = {
+                [1] = "GetFoodFromPot"
+            }
+            game:GetService("ReplicatedStorage").GameEvents.CookingPotService_RE:FireServer(unpack(args))
+            print("🍲 Obteniendo comida del pot...")
+        end)
+        if not success then
+            warn("Error obteniendo comida del pot: " .. tostring(err))
+        end
+        task.wait(2) -- Obtener comida cada 2 segundos
+    end
+end
+
+-- Iniciar el bucle de obtener comida en segundo plano
+task.spawn(getFoodFromPotLoop)
 local function collectPlantFromWorld(plantName)
     local success, err = pcall(function()
         if plantName == "Bone Blossom" then
@@ -48,7 +71,7 @@ local function equipAndSubmitPlant(plantName, times)
                     game:GetService("ReplicatedStorage").GameEvents.CookingPotService_RE:FireServer(unpack(args))
                     task.wait(0.5)
                     plantFound = true
-                    print(plantName .. " " .. i .. "/" .. times .. " enviado exitosamente!")
+                    print(plantName .. " enviado exitosamente!")
                     break
                 end
             end
@@ -57,18 +80,6 @@ local function equipAndSubmitPlant(plantName, times)
                 collectPlantFromWorld(plantName)
                 task.wait(2) -- Esperar 2 segundos antes de buscar nuevamente
             end
-        end
-    end
-    
-    -- Verificar que todos los items del tipo se hayan enviado correctamente
-    if plantName == "Bone Blossom" then
-        print("Verificando que los 4 Bone Blossom se hayan subido correctamente...")
-        task.wait(2) -- Esperar un poco para que se procesen
-        local remainingBoneBlossoms = countPlantsInInventory("Bone Blossom")
-        if remainingBoneBlossoms > 0 then
-            print("Advertencia: Aún quedan " .. remainingBoneBlossoms .. " Bone Blossoms en inventario")
-        else
-            print("✓ Todos los Bone Blossoms han sido enviados correctamente")
         end
     end
 end
@@ -103,43 +114,13 @@ local function ensureInventoryStock()
     
     print("Inventario verificado: " .. countPlantsInInventory("Bone Blossom") .. " Bone Blossoms, " .. countPlantsInInventory("Tomato") .. " Tomatos")
 end
-local function confirmBoneBlossomCompletion()
-    print("=== CONFIRMANDO ENVÍO DE BONE BLOSSOMS ===")
-    local remainingBoneBlossoms = countPlantsInInventory("Bone Blossom")
-    local attempts = 0
-    local maxAttempts = 5
-    
-    while remainingBoneBlossoms > 0 and attempts < maxAttempts do
-        attempts = attempts + 1
-        print("Intento " .. attempts .. ": Aún quedan " .. remainingBoneBlossoms .. " Bone Blossoms en inventario")
-        print("Esperando 3 segundos para verificar nuevamente...")
-        task.wait(3)
-        remainingBoneBlossoms = countPlantsInInventory("Bone Blossom")
-    end
-    
-    if remainingBoneBlossoms == 0 then
-        print("✓ CONFIRMADO: Todos los Bone Blossoms han sido procesados")
-        print("✓ PROCEDIENDO CON EL TOMATO...")
-        return true
-    else
-        print("⚠ ADVERTENCIA: Aún quedan " .. remainingBoneBlossoms .. " Bone Blossoms después de " .. maxAttempts .. " intentos")
-        print("Continuando de todas formas...")
-        return false
-    end
-end
-
 local iteration = 1
 while true do
     print("Iniciando iteración #" .. iteration)
     ensureInventoryStock()
-    
-    print("=== FASE 1: ENVIANDO BONE BLOSSOMS ===")
+    print("Equipando Bone Blossom...")
     equipAndSubmitPlant("Bone Blossom", 4)
-    
-    -- Confirmar que todos los Bone Blossoms se han procesado antes de continuar
-    confirmBoneBlossomCompletion()
-    
-    print("=== FASE 2: ENVIANDO TOMATO ===")
+    print("Equipando Coconut...")
     equipAndSubmitPlant("Tomato", 1)
     print("Ejecutando CookBest...")
     task.wait(0.5)
@@ -147,6 +128,15 @@ while true do
         [1] = "CookBest"
     }
     game:GetService("ReplicatedStorage").GameEvents.CookingPotService_RE:FireServer(unpack(args))
+    
+    -- Obtener comida del pot inmediatamente después de cocinar
+    task.wait(1)
+    local getFoodArgs = {
+        [1] = "GetFoodFromPot"
+    }
+    game:GetService("ReplicatedStorage").GameEvents.CookingPotService_RE:FireServer(unpack(getFoodArgs))
+    print("🍲 Obteniendo comida recién cocinada...")
+    
     print("Iteración #" .. iteration .. " completada. Esperando antes de la siguiente...")
     iteration = iteration + 1
     task.wait(5)
