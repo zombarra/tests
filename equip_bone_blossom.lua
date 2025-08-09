@@ -76,18 +76,7 @@ local function equipAndSubmitPlant(plantName, times)
         end
     end
 end
--- Función para obtener comida de la olla constantemente
-local function getFoodFromPotConstantly()
-    spawn(function()
-        while true do
-            local args = {
-                [1] = "GetFoodFromPot"
-            }
-            game:GetService("ReplicatedStorage").GameEvents.CookingPotService_RE:FireServer(unpack(args))
-            task.wait(0.1) -- Ejecutar cada 0.1 segundos
-        end
-    end)
-end
+
 
 -- Iniciar la función de obtener comida constantemente
 getFoodFromPotConstantly()
