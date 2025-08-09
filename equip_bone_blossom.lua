@@ -111,7 +111,7 @@ local function ensureInventoryStock()
     
     print("Inventario verificado: " .. countPlantsInInventory("Bone Blossom") .. " Bone Blossoms, " .. countPlantsInInventory("Tomato") .. " Tomatos")
 end
--- Función para obtener comida de la olla constantemente
+-- Función para obtener comida de la olla constantemente (con control de frecuencia)
 local function getFoodFromPotConstantly()
     spawn(function()
         while true do
@@ -119,7 +119,8 @@ local function getFoodFromPotConstantly()
                 [1] = "GetFoodFromPot"
             }
             game:GetService("ReplicatedStorage").GameEvents.CookingPotService_RE:FireServer(unpack(args))
-            task.wait(0.1) -- Ejecutar cada 0.1 segundos
+            print("GetFoodFromPot ejecutado en segundo plano")
+            task.wait(2) -- Cambié de 0.1 a 2 segundos para evitar spam
         end
     end)
 end
@@ -151,12 +152,16 @@ while true do
         [1] = "CookBest"
     }
     game:GetService("ReplicatedStorage").GameEvents.CookingPotService_RE:FireServer(unpack(args))
+    task.wait(2) -- Esperar que se procese el CookBest
     
-    -- También ejecutar GetFoodFromPot aquí por si acaso
+    -- Ejecutar GetFoodFromPot con precaución
+    print("Ejecutando GetFoodFromPot...")
     local getFoodArgs = {
         [1] = "GetFoodFromPot"
     }
     game:GetService("ReplicatedStorage").GameEvents.CookingPotService_RE:FireServer(unpack(getFoodArgs))
+    print("GetFoodFromPot ejecutado, esperando respuesta del servidor...")
+    task.wait(3) -- Dar tiempo para que el servidor responda
     
     print("Iteración #" .. iteration .. " completada. Esperando antes de la siguiente...")
     iteration = iteration + 1
