@@ -9,23 +9,62 @@ local skipCooking = true
 local function collectPlantFromWorld(plantName)
     local success, err = pcall(function()
         if plantName == "Bone Blossom" then
-            -- Script específico para Bone Blossom
-            local args = {
-                [1] = {
-                    [1] = workspace.Farm.Farm.Important.Plants_Physical:FindFirstChild("Bone Blossom").Fruits:FindFirstChild("Bone Blossom")
-                }
-            }
-            game:GetService("ReplicatedStorage").GameEvents.Crops.Collect:FireServer(unpack(args))
-            print("Recolectando Bone Blossom...")
+            print("Intentando recolectar todas las Bone Blossom disponibles...")
+            -- Buscar todas las Bone Blossom en el mundo
+            local plantsPhysical = workspace.Farm.Farm.Important.Plants_Physical
+            local boneBlossom = plantsPhysical:FindFirstChild("Bone Blossom")
+            
+            if boneBlossom then
+                local fruits = boneBlossom:FindFirstChild("Fruits")
+                if fruits then
+                    -- Recolectar todas las frutas de Bone Blossom disponibles
+                    for _, fruit in pairs(fruits:GetChildren()) do
+                        if fruit.Name == "Bone Blossom" then
+                            local args = {
+                                [1] = {
+                                    [1] = fruit
+                                }
+                            }
+                            game:GetService("ReplicatedStorage").GameEvents.Crops.Collect:FireServer(unpack(args))
+                            print("Recolectando Bone Blossom individual...")
+                            task.wait(0.1) -- Pequeña pausa entre recolecciones
+                        end
+                    end
+                else
+                    warn("No se encontró carpeta Fruits para Bone Blossom")
+                end
+            else
+                warn("No se encontró planta Bone Blossom en el mundo")
+            end
+            
         elseif plantName == "Tomato" then
-            -- Script específico para Tomato
-            local args = {
-                [1] = {
-                    [1] = workspace.Farm.Farm.Important.Plants_Physical.Tomato.Fruits.Tomato
-                }
-            }
-            game:GetService("ReplicatedStorage").GameEvents.Crops.Collect:FireServer(unpack(args))
-            print("Recolectando Tomato...")
+            print("Intentando recolectar todos los Tomatoes disponibles...")
+            -- Buscar todos los Tomatoes en el mundo
+            local plantsPhysical = workspace.Farm.Farm.Important.Plants_Physical
+            local tomato = plantsPhysical:FindFirstChild("Tomato")
+            
+            if tomato then
+                local fruits = tomato:FindFirstChild("Fruits")
+                if fruits then
+                    -- Recolectar todas las frutas de Tomato disponibles
+                    for _, fruit in pairs(fruits:GetChildren()) do
+                        if fruit.Name == "Tomato" then
+                            local args = {
+                                [1] = {
+                                    [1] = fruit
+                                }
+                            }
+                            game:GetService("ReplicatedStorage").GameEvents.Crops.Collect:FireServer(unpack(args))
+                            print("Recolectando Tomato individual...")
+                            task.wait(0.1) -- Pequeña pausa entre recolecciones
+                        end
+                    end
+                else
+                    warn("No se encontró carpeta Fruits para Tomato")
+                end
+            else
+                warn("No se encontró planta Tomato en el mundo")
+            end
         end
     end)
     if not success then
