@@ -34,6 +34,17 @@ local function collectPlantFromWorld(plantName)
     end
 end
 
+-- Función para contar plantas en inventario
+local function countPlantsInInventory(plantName)
+    local count = 0
+    for _, tool in ipairs(Backpack:GetChildren()) do
+        if tool:IsA("Tool") and tool:GetAttribute("f") == plantName and not tool:GetAttribute("Seed") then
+            count = count + 1
+        end
+    end
+    return count
+end
+
 -- Función para equipar y submitir planta
 local function equipAndSubmitPlant(plantName, times)
     for i = 1, times do
@@ -94,17 +105,6 @@ local function equipAndSubmitPlant(plantName, times)
             break -- Salir del bucle para evitar quedarse atascado
         end
     end
-end
-
--- Función para contar plantas en inventario
-local function countPlantsInInventory(plantName)
-    local count = 0
-    for _, tool in ipairs(Backpack:GetChildren()) do
-        if tool:IsA("Tool") and tool:GetAttribute("f") == plantName and not tool:GetAttribute("Seed") then
-            count = count + 1
-        end
-    end
-    return count
 end
 
 -- Función para asegurar stock en inventario
