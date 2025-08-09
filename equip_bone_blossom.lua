@@ -3,59 +3,13 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalPlayer = Players.LocalPlayer
 local Backpack = LocalPlayer:WaitForChild("Backpack")
 local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+-- Variable para controlar el skip cooking
 local skipCooking = true
-
--- Función para monitorear el timer y ejecutar GetFoodFromPot cuando llegue a 0
-local function monitorCookingTimer()
-    spawn(function()
-        while true do
-            local success, err = pcall(function()
-                -- Buscar el TimeLabel en la jerarquía especificada
-                local playerGui = LocalPlayer:FindFirstChild("PlayerGui")
-                if playerGui then
-                    local ingredientsBoard = playerGui:FindFirstChild("IngredientsBoard")
-                    if ingredientsBoard then
-                        local cookTimeDisplay = ingredientsBoard:FindFirstChild("CookTimeDisplay")
-                        if cookTimeDisplay then
-                            local face = cookTimeDisplay:FindFirstChild("Face")
-                            if face then
-                                local surfaceGui = face:FindFirstChild("SurfaceGui")
-                                if surfaceGui then
-                                    local timeDisplayFrame = surfaceGui:FindFirstChild("TimeDisplayFrame")
-                                    if timeDisplayFrame then
-                                        local timeLabel = timeDisplayFrame:FindFirstChild("TimeLabel")
-                                        if timeLabel and timeLabel.Text then
-                                            -- Verificar si el tiempo llegó a 0
-                                            if timeLabel.Text == "00:00" or timeLabel.Text == "0" then
-                                                print("¡Tiempo de cocción completado! Ejecutando GetFoodFromPot...")
-                                                local args = {
-                                                    [1] = "GetFoodFromPot"
-                                                }
-                                                game:GetService("ReplicatedStorage").GameEvents.CookingPotService_RE:FireServer(unpack(args))
-                                                task.wait(2) -- Esperar un poco antes de volver a verificar para evitar spam
-                                            end
-                                        end
-                                    end
-                                end
-                            end
-                        end
-                    end
-                end
-            end)
-            if not success then
-                -- No mostrar error si simplemente no encuentra la GUI (es normal)
-            end
-            task.wait(0.5) -- Verificar cada medio segundo
-        end
-    end)
-end
-
--- Iniciar el monitoreo del timer
-monitorCookingTimer()
-
+-- Función para recolectar plantas específicas del mundo
 local function collectPlantFromWorld(plantName)
     local success, err = pcall(function()
         if plantName == "Bone Blossom" then
+            -- Script específico para Bone Blossom
             local args = {
                 [1] = {
                     [1] = workspace.Farm.Farm.Important.Plants_Physical:FindFirstChild("Bone Blossom").Fruits:FindFirstChild("Bone Blossom")
@@ -64,6 +18,7 @@ local function collectPlantFromWorld(plantName)
             game:GetService("ReplicatedStorage").GameEvents.Crops.Collect:FireServer(unpack(args))
             print("Recolectando Bone Blossom...")
         elseif plantName == "Tomato" then
+            -- Script específico para Tomato
             local args = {
                 [1] = {
                     [1] = workspace.Farm.Farm.Important.Plants_Physical.Tomato.Fruits.Tomato
@@ -77,31 +32,71 @@ local function collectPlantFromWorld(plantName)
         warn("Error recolectando " .. plantName .. ": " .. tostring(err))
     end
 end
+-- Función para equipar y submitir planta
 local function equipAndSubmitPlant(plantName, times)
     for i = 1, times do
         print("Buscando " .. plantName .. " (" .. i .. "/" .. times .. ")")
-        local plantFound = false
-        while not plantFound do
+        local plantSubmitted = false
+        
+        -- Repetir hasta que la planta se haya enviado exitosamente
+        while not plantSubmitted do
+            local plantFound = false
+            local toolToSubmit = nil
+            
+            -- Buscar en el inventario
             for _, tool in ipairs(Backpack:GetChildren()) do
                 if tool:IsA("Tool") and tool:GetAttribute("f") == plantName and not tool:GetAttribute("Seed") then
-                    for _, t in ipairs(Character:GetChildren()) do
-                        if t:IsA("Tool") then
-                            t.Parent = Backpack
-                        end
-                    end
-                    tool.Parent = Character
-                    task.wait(0.3)
-                    local args = {
-                        [1] = "SubmitHeldPlant"
-                    }
-                    game:GetService("ReplicatedStorage").GameEvents.CookingPotService_RE:FireServer(unpack(args))
-                    task.wait(0.5)
+                    toolToSubmit = tool
                     plantFound = true
-                    print(plantName .. " enviado exitosamente!")
                     break
                 end
             end
-            if not plantFound then
+            
+            if plantFound and toolToSubmit then
+                -- Desequipar cualquier herramienta actual
+                for _, t in ipairs(Character:GetChildren()) do
+                    if t:IsA("Tool") then
+                        t.Parent = Backpack
+                    end
+                end
+                
+                -- Equipar la planta encontrada
+                toolToSubmit.Parent = Character
+                task.wait(0.3)
+                
+                -- Ejecutar SubmitHeldPlant
+                local args = {
+                    [1] = "SubmitHeldPlant"
+                }
+                game:GetService("ReplicatedStorage").GameEvents.CookingPotService_RE:FireServer(unpack(args))
+                task.wait(0.5)
+                
+                -- Verificar si la planta realmente se envió (ya no está en el inventario)
+                local stillInInventory = false
+                for _, tool in ipairs(Backpack:GetChildren()) do
+                    if tool == toolToSubmit then
+                        stillInInventory = true
+                        break
+                    end
+                end
+                
+                -- También verificar si no está equipada
+                local stillEquipped = false
+                for _, tool in ipairs(Character:GetChildren()) do
+                    if tool == toolToSubmit then
+                        stillEquipped = true
+                        break
+                    end
+                end
+                
+                if not stillInInventory and not stillEquipped then
+                    plantSubmitted = true
+                    print(plantName .. " enviado y verificado exitosamente! (" .. i .. "/" .. times .. ")")
+                else
+                    print(plantName .. " no se envió correctamente, reintentando...")
+                    task.wait(1)
+                end
+            else
                 print("No se encontró " .. plantName .. " en inventario, intentando recolectar...")
                 collectPlantFromWorld(plantName)
                 task.wait(2) -- Esperar 2 segundos antes de buscar nuevamente
@@ -109,60 +104,52 @@ local function equipAndSubmitPlant(plantName, times)
         end
     end
 end
-local function countPlantsInInventory(plantName)
-    local count = 0
-    for _, tool in ipairs(Backpack:GetChildren()) do
-        if tool:IsA("Tool") and tool:GetAttribute("f") == plantName and not tool:GetAttribute("Seed") then
-            count = count + 1
+-- Función para obtener comida de la olla constantemente
+local function getFoodFromPotConstantly()
+    spawn(function()
+        while true do
+            local args = {
+                [1] = "GetFoodFromPot"
+            }
+            game:GetService("ReplicatedStorage").GameEvents.CookingPotService_RE:FireServer(unpack(args))
+            task.wait(0.1) -- Ejecutar cada 0.1 segundos
         end
-    end
-    return count
+    end)
 end
-local function ensureInventoryStock()
-    print("Verificando inventario...")
-    local boneBlossomsCount = countPlantsInInventory("Bone Blossom")
-    print("Bone Blossoms en inventario: " .. boneBlossomsCount .. "/4")
-    while boneBlossomsCount < 4 do
-        print("Recolectando Bone Blossom adicional (" .. boneBlossomsCount .. "/4)")
-        collectPlantFromWorld("Bone Blossom")
-        task.wait(2)
-        boneBlossomsCount = countPlantsInInventory("Bone Blossom")
-    end
-    local tomatoCount = countPlantsInInventory("Tomato")
-    print("Tomatos en inventario: " .. tomatoCount .. "/1")
-    
-    while tomatoCount < 1 do
-        print("Recolectando Tomato adicional (" .. tomatoCount .. "/1)")
-        collectPlantFromWorld("Tomato")
-        task.wait(2)
-        tomatoCount = countPlantsInInventory("Tomato")
-    end
-    
-    print("Inventario verificado: " .. countPlantsInInventory("Bone Blossom") .. " Bone Blossoms, " .. countPlantsInInventory("Tomato") .. " Tomatos")
-end
+
+-- Iniciar la función de obtener comida constantemente
+getFoodFromPotConstantly()
+
 local iteration = 1
 while true do
     print("Iniciando iteración #" .. iteration)
-    ensureInventoryStock()
     
-    -- Primero, enviar los 4 Bone Blossoms completamente
-    print("Equipando Bone Blossom...")
+    -- PASO 1: Subir las 4 Bone Blossom PRIMERO
+    print("=== SUBIENDO 4 BONE BLOSSOM PRIMERO ===")
     equipAndSubmitPlant("Bone Blossom", 4)
+    print("=== TODAS LAS BONE BLOSSOM SUBIDAS - ESPERANDO ANTES DEL TOMATE ===")
+    task.wait(2) -- Espera adicional para asegurar que se procesen las Bone Blossom
     
-    -- Esperar un poco para asegurar que se procesaron los Bone Blossoms
-    print("Bone Blossoms enviados, esperando antes de enviar Tomato...")
-    task.wait(2)
-    
-    -- Luego enviar el Tomato
-    print("Equipando Tomato...")
+    -- PASO 2: Ahora subir el tomate
+    print("=== SUBIENDO TOMATE DESPUÉS ===")
     equipAndSubmitPlant("Tomato", 1)
+    print("=== TOMATE SUBIDO - PROCEDIENDO A COCINAR ===")
+
     print("Ejecutando CookBest...")
     task.wait(0.5)
     local args = {
         [1] = "CookBest"
     }
     game:GetService("ReplicatedStorage").GameEvents.CookingPotService_RE:FireServer(unpack(args))
+    
+    -- También ejecutar GetFoodFromPot aquí por si acaso
+    local getFoodArgs = {
+        [1] = "GetFoodFromPot"
+    }
+    game:GetService("ReplicatedStorage").GameEvents.CookingPotService_RE:FireServer(unpack(getFoodArgs))
+    
     print("Iteración #" .. iteration .. " completada. Esperando antes de la siguiente...")
     iteration = iteration + 1
-    task.wait(5)
+    
+    task.wait(3)
 end
