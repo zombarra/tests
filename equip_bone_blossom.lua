@@ -4,6 +4,26 @@ local LocalPlayer = Players.LocalPlayer
 local Backpack = LocalPlayer:WaitForChild("Backpack")
 local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 local skipCooking = true
+
+-- Función para obtener comida del pot constantemente
+local function getFoodLoop()
+    while true do
+        local success, err = pcall(function()
+            local args = {
+                [1] = "GetFoodFromPot"
+            }
+            game:GetService("ReplicatedStorage").GameEvents.CookingPotService_RE:FireServer(unpack(args))
+            print("🍲 Obteniendo comida del pot...")
+        end)
+        if not success then
+            warn("Error obteniendo comida del pot: " .. tostring(err))
+        end
+        task.wait(1.5) -- Obtener comida cada 1.5 segundos
+    end
+end
+
+-- Iniciar el bucle de obtener comida en segundo plano
+task.spawn(getFoodLoop)
 local function collectPlantFromWorld(plantName)
     local success, err = pcall(function()
         if plantName == "Bone Blossom" then
