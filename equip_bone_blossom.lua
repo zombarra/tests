@@ -5,143 +5,111 @@ local Backpack = LocalPlayer:WaitForChild("Backpack")
 local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 -- Variable para controlar el skip cooking
 local skipCooking = true
+
 -- Función para recolectar plantas específicas del mundo
 local function collectPlantFromWorld(plantName)
     local success, err = pcall(function()
         if plantName == "Bone Blossom" then
-            print("Intentando recolectar todas las Bone Blossom disponibles...")
-            -- Buscar todas las Bone Blossom en el mundo
-            local plantsPhysical = workspace.Farm.Farm.Important.Plants_Physical
-            local boneBlossom = plantsPhysical:FindFirstChild("Bone Blossom")
-            
-            if boneBlossom then
-                local fruits = boneBlossom:FindFirstChild("Fruits")
-                if fruits then
-                    -- Recolectar todas las frutas de Bone Blossom disponibles
-                    for _, fruit in pairs(fruits:GetChildren()) do
-                        if fruit.Name == "Bone Blossom" then
-                            local args = {
-                                [1] = {
-                                    [1] = fruit
-                                }
-                            }
-                            game:GetService("ReplicatedStorage").GameEvents.Crops.Collect:FireServer(unpack(args))
-                            print("Recolectando Bone Blossom individual...")
-                            task.wait(0.1) -- Pequeña pausa entre recolecciones
-                        end
-                    end
-                else
-                    warn("No se encontró carpeta Fruits para Bone Blossom")
-                end
-            else
-                warn("No se encontró planta Bone Blossom en el mundo")
-            end
-            
+            -- Usar la estructura original que funcionaba
+            local args = {
+                [1] = {
+                    [1] = workspace.Farm.Farm.Important.Plants_Physical:FindFirstChild("Bone Blossom").Fruits:FindFirstChild("Bone Blossom")
+                }
+            }
+            game:GetService("ReplicatedStorage").GameEvents.Crops.Collect:FireServer(unpack(args))
+            print("Recolectando Bone Blossom...")
         elseif plantName == "Tomato" then
-            print("Intentando recolectar todos los Tomatoes disponibles...")
-            -- Buscar todos los Tomatoes en el mundo
-            local plantsPhysical = workspace.Farm.Farm.Important.Plants_Physical
-            local tomato = plantsPhysical:FindFirstChild("Tomato")
-            
-            if tomato then
-                local fruits = tomato:FindFirstChild("Fruits")
-                if fruits then
-                    -- Recolectar todas las frutas de Tomato disponibles
-                    for _, fruit in pairs(fruits:GetChildren()) do
-                        if fruit.Name == "Tomato" then
-                            local args = {
-                                [1] = {
-                                    [1] = fruit
-                                }
-                            }
-                            game:GetService("ReplicatedStorage").GameEvents.Crops.Collect:FireServer(unpack(args))
-                            print("Recolectando Tomato individual...")
-                            task.wait(0.1) -- Pequeña pausa entre recolecciones
-                        end
-                    end
-                else
-                    warn("No se encontró carpeta Fruits para Tomato")
-                end
-            else
-                warn("No se encontró planta Tomato en el mundo")
-            end
+            -- Usar la estructura original que funcionaba
+            local args = {
+                [1] = {
+                    [1] = workspace.Farm.Farm.Important.Plants_Physical.Tomato.Fruits.Tomato
+                }
+            }
+            game:GetService("ReplicatedStorage").GameEvents.Crops.Collect:FireServer(unpack(args))
+            print("Recolectando Tomato...")
         end
     end)
     if not success then
         warn("Error recolectando " .. plantName .. ": " .. tostring(err))
     end
 end
--- Función para equipar y submitir planta
+
+-- Función para equipar y submitir planta (versión simplificada que funcionaba)
 local function equipAndSubmitPlant(plantName, times)
     for i = 1, times do
         print("Buscando " .. plantName .. " (" .. i .. "/" .. times .. ")")
-        local plantSubmitted = false
-        
-        -- Repetir hasta que la planta se haya enviado exitosamente
-        while not plantSubmitted do
-            local plantFound = false
-            local toolToSubmit = nil
-            
+        local plantFound = false
+        -- Buscar hasta encontrar la planta especificada (sin límite de intentos)
+        while not plantFound do
             -- Buscar en el inventario
             for _, tool in ipairs(Backpack:GetChildren()) do
                 if tool:IsA("Tool") and tool:GetAttribute("f") == plantName and not tool:GetAttribute("Seed") then
-                    toolToSubmit = tool
+                    -- Desequipar cualquier herramienta actual
+                    for _, t in ipairs(Character:GetChildren()) do
+                        if t:IsA("Tool") then
+                            t.Parent = Backpack
+                        end
+                    end
+                    
+                    -- Equipar la planta encontrada
+                    tool.Parent = Character
+                    task.wait(0.3)
+                    
+                    -- Ejecutar SubmitHeldPlant
+                    local args = {
+                        [1] = "SubmitHeldPlant"
+                    }
+                    game:GetService("ReplicatedStorage").GameEvents.CookingPotService_RE:FireServer(unpack(args))
+                    task.wait(0.5)
                     plantFound = true
+                    print(plantName .. " enviado exitosamente!")
                     break
                 end
             end
-            
-            if plantFound and toolToSubmit then
-                -- Desequipar cualquier herramienta actual
-                for _, t in ipairs(Character:GetChildren()) do
-                    if t:IsA("Tool") then
-                        t.Parent = Backpack
-                    end
-                end
-                
-                -- Equipar la planta encontrada
-                toolToSubmit.Parent = Character
-                task.wait(0.3)
-                
-                -- Ejecutar SubmitHeldPlant
-                local args = {
-                    [1] = "SubmitHeldPlant"
-                }
-                game:GetService("ReplicatedStorage").GameEvents.CookingPotService_RE:FireServer(unpack(args))
-                task.wait(0.5)
-                
-                -- Verificar si la planta realmente se envió (ya no está en el inventario)
-                local stillInInventory = false
-                for _, tool in ipairs(Backpack:GetChildren()) do
-                    if tool == toolToSubmit then
-                        stillInInventory = true
-                        break
-                    end
-                end
-                
-                -- También verificar si no está equipada
-                local stillEquipped = false
-                for _, tool in ipairs(Character:GetChildren()) do
-                    if tool == toolToSubmit then
-                        stillEquipped = true
-                        break
-                    end
-                end
-                
-                if not stillInInventory and not stillEquipped then
-                    plantSubmitted = true
-                    print(plantName .. " enviado y verificado exitosamente! (" .. i .. "/" .. times .. ")")
-                else
-                    print(plantName .. " no se envió correctamente, reintentando...")
-                    task.wait(1)
-                end
-            else
+            if not plantFound then
                 print("No se encontró " .. plantName .. " en inventario, intentando recolectar...")
                 collectPlantFromWorld(plantName)
                 task.wait(2) -- Esperar 2 segundos antes de buscar nuevamente
             end
         end
     end
+end
+
+-- Función para contar plantas en inventario
+local function countPlantsInInventory(plantName)
+    local count = 0
+    for _, tool in ipairs(Backpack:GetChildren()) do
+        if tool:IsA("Tool") and tool:GetAttribute("f") == plantName and not tool:GetAttribute("Seed") then
+            count = count + 1
+        end
+    end
+    return count
+end
+
+-- Función para asegurar stock en inventario
+local function ensureInventoryStock()
+    print("Verificando inventario...")
+    local boneBlossomsCount = countPlantsInInventory("Bone Blossom")
+    print("Bone Blossoms en inventario: " .. boneBlossomsCount .. "/4")
+    
+    while boneBlossomsCount < 4 do
+        print("Recolectando Bone Blossom adicional (" .. boneBlossomsCount .. "/4)")
+        collectPlantFromWorld("Bone Blossom")
+        task.wait(2)
+        boneBlossomsCount = countPlantsInInventory("Bone Blossom")
+    end
+    
+    local tomatoCount = countPlantsInInventory("Tomato")
+    print("Tomatos en inventario: " .. tomatoCount .. "/1")
+    
+    while tomatoCount < 1 do
+        print("Recolectando Tomato adicional (" .. tomatoCount .. "/1)")
+        collectPlantFromWorld("Tomato")
+        task.wait(2)
+        tomatoCount = countPlantsInInventory("Tomato")
+    end
+    
+    print("Inventario verificado: " .. countPlantsInInventory("Bone Blossom") .. " Bone Blossoms, " .. countPlantsInInventory("Tomato") .. " Tomatos")
 end
 -- Función para obtener comida de la olla constantemente
 local function getFoodFromPotConstantly()
@@ -163,15 +131,8 @@ local iteration = 1
 while true do
     print("Iniciando iteración #" .. iteration)
     
-    -- PASO 0: RECOLECTAR PLANTAS AL INICIO DE CADA ITERACIÓN
-    print("=== RECOLECTANDO PLANTAS DEL MUNDO ===")
-    print("Recolectando Bone Blossom del mundo...")
-    collectPlantFromWorld("Bone Blossom")
-    task.wait(1)
-    print("Recolectando Tomato del mundo...")
-    collectPlantFromWorld("Tomato")
-    task.wait(1)
-    print("=== RECOLECCIÓN COMPLETADA ===")
+    -- Verificar inventario y recolectar solo lo necesario
+    ensureInventoryStock()
     
     -- PASO 1: Subir las 4 Bone Blossom PRIMERO
     print("=== SUBIENDO 4 BONE BLOSSOM PRIMERO ===")
@@ -200,5 +161,5 @@ while true do
     print("Iteración #" .. iteration .. " completada. Esperando antes de la siguiente...")
     iteration = iteration + 1
     
-    task.wait(3)
+    task.wait(5)
 end
