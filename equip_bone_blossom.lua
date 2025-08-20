@@ -103,7 +103,7 @@ local function sellSpecificPets()
                     local weight = getPetWeight(tool.Name)
                     if isPetFavorited(tool) then
                         -- No vender favoritos equipados
-                    elseif weight < 4 and weight > 0 then
+                    elseif weight < 5 and weight > 0 then
                         local args = {
                             [1] = tool
                         }
