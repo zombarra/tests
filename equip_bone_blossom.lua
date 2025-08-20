@@ -63,29 +63,29 @@ local function sellSpecificPets()
         "Toucan"
     }
     
-    -- Buscar en backpack
+    -- Buscar SOLO UNA pet en backpack por ciclo
     for _, tool in pairs(backpack:GetChildren()) do
-        if tool:IsA("Tool") then
+        if tool:IsA("Tool") and petsSold == 0 then -- Solo vender 1 por ciclo
             for _, petType in pairs(petsToSell) do
                 if tool.Name:find(petType) then
                     local weight = getPetWeight(tool.Name)
-                    -- Verificar favoritos antes de vender
                     if isPetFavorited(tool) then
                         -- No vender favoritos
-                    elseif weight < 6 and weight > 0 then
+                    elseif weight < 4 and weight > 0 then
                         local humanoid = character:FindFirstChildOfClass("Humanoid")
                         if humanoid then
                             humanoid:UnequipTools()
-                            task.wait(0.1)
+                            task.wait(0.5) -- Espera más larga
                             humanoid:EquipTool(tool)
-                            task.wait(0.3)
+                            task.wait(1) -- Espera más larga
                             local args = {
                                 [1] = character:FindFirstChild(tool.Name)
                             }
                             if args[1] then
                                 RS.GameEvents.SellPet_RE:FireServer(unpack(args))
                                 petsSold = petsSold + 1
-                                task.wait(0.5)
+                                task.wait(2) -- Espera larga después de vender
+                                return petsSold -- Salir inmediatamente
                             end
                         end
                     end
@@ -95,23 +95,26 @@ local function sellSpecificPets()
         end
     end
     
-    -- Buscar en character
-    for _, tool in pairs(character:GetChildren()) do
-        if tool:IsA("Tool") thens
-            for _, petType in pairs(petsToSell) do
-                if tool.Name:find(petType) then
-                    local weight = getPetWeight(tool.Name)
-                    if isPetFavorited(tool) then
-                        -- No vender favoritos equipados
-                    elseif weight < 6 and weight > 0 then
-                        local args = {
-                            [1] = tool
-                        }
-                        RS.GameEvents.SellPet_RE:FireServer(unpack(args))
-                        petsSold = petsSold + 1
-                        task.wait(0.5)
+    -- Buscar SOLO UNA pet en character por ciclo (solo si no vendió en backpack)
+    if petsSold == 0 then
+        for _, tool in pairs(character:GetChildren()) do
+            if tool:IsA("Tool") then
+                for _, petType in pairs(petsToSell) do
+                    if tool.Name:find(petType) then
+                        local weight = getPetWeight(tool.Name)
+                        if isPetFavorited(tool) then
+                            -- No vender favoritos equipados
+                        elseif weight < 4 and weight > 0 then
+                            local args = {
+                                [1] = tool
+                            }
+                            RS.GameEvents.SellPet_RE:FireServer(unpack(args))
+                            petsSold = petsSold + 1
+                            task.wait(2) -- Espera larga
+                            return petsSold -- Salir inmediatamente
+                        end
+                        break
                     end
-                    break
                 end
             end
         end
@@ -127,9 +130,9 @@ local function autoSellLoop()
     while true do
         local sold = sellSpecificPets()
         if sold > 0 then
-            task.wait(5)
+            task.wait(15) -- Espera 15 segundos después de vender
         else
-            task.wait(10)
+            task.wait(10) -- Espera 10 segundos si no vendió nada
         end
     end
 end
