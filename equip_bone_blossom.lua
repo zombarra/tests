@@ -1,4 +1,4 @@
--- Auto Farm Bot Simplificado - Basado en funciones que funcionan
+-- Auto Farm Bot - Basado en scripts que SÍ funcionan
 
 local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
@@ -11,18 +11,43 @@ local PetEggService = RS.GameEvents.PetEggService
 
 print("🚀 Auto Farm Bot iniciado...")
 
--- Función para cambiar loadout (TU FUNCIÓN QUE FUNCIONA)
-local function switchToLoadout(slotNumber)
+-- Variables de control
+local lastEggCheck = 0
+local lastSellCheck = 0
+local lastPlaceCheck = 0
+
+-- Función para cambiar loadout (EXACTA como la tuya)
+local function switchToLoadout3()
     local args = {
         [1] = "SwapPetLoadout",
-        [2] = slotNumber
+        [2] = 3
     }
     PetsService:FireServer(unpack(args))
-    print("📦 Cambiado al loadout " .. slotNumber)
-    task.wait(1)
+    print("📦 Cambiado al loadout 3")
+    task.wait(0.5)
 end
 
--- Función para detectar huevos listos (TU FUNCIÓN QUE FUNCIONA)
+local function switchToLoadout2()
+    local args = {
+        [1] = "SwapPetLoadout",
+        [2] = 2
+    }
+    PetsService:FireServer(unpack(args))
+    print("📦 Cambiado al loadout 2")
+    task.wait(0.5)
+end
+
+local function switchToLoadout1()
+    local args = {
+        [1] = "SwapPetLoadout",
+        [2] = 1
+    }
+    PetsService:FireServer(unpack(args))
+    print("📦 Cambiado al loadout 1")
+    task.wait(0.5)
+end
+
+-- Función para detectar huevos listos (EXACTA como la tuya que funciona)
 local function checkEggsReady()
     local success = pcall(function()
         ModelService.EggReadyToHatch_RE:FireServer()
@@ -32,54 +57,181 @@ local function checkEggsReady()
         return true
     end
     
-    -- Método visual de respaldo
-    local farm = workspace:FindFirstChild("Farm")
-    if farm then
-        for _, descendant in pairs(farm:GetDescendants()) do
-            if descendant.Name:lower():find("egg") then
-                local gui = descendant:FindFirstChildOfClass("BillboardGui")
-                if gui then
-                    local textLabel = gui:FindFirstChildOfClass("TextLabel")
-                    if textLabel then
-                        local text = textLabel.Text:lower()
-                        if text:find("ready") or text:find("hatch") or text:find("!") then
-                            return true
+    local function findReadyEggs()
+        local readyEggs = 0
+        
+        local farm = workspace:FindFirstChild("Farm")
+        if farm then
+            for _, descendant in pairs(farm:GetDescendants()) do
+                if descendant.Name:lower():find("egg") then
+                    local gui = descendant:FindFirstChildOfClass("BillboardGui")
+                    if gui then
+                        local textLabel = gui:FindFirstChildOfClass("TextLabel")
+                        if textLabel then
+                            local text = textLabel.Text:lower()
+                            if text:find("ready") or text:find("hatch") or text:find("!") then
+                                readyEggs = readyEggs + 1
+                            end
                         end
                     end
+                    
+                    if descendant:GetAttribute("ReadyToHatch") or descendant:GetAttribute("CanHatch") then
+                        readyEggs = readyEggs + 1
+                    end
                 end
-                
-                if descendant:GetAttribute("ReadyToHatch") or descendant:GetAttribute("CanHatch") then
-                    return true
+            end
+        end
+        
+        return readyEggs > 0
+    end
+    
+    return findReadyEggs()
+end
+
+-- Función para hacer hatch con los args correctos
+local function hatchEggs()
+    print("🥚 Intentando hacer hatch...")
+    
+    local args = {
+        [1] = "HatchPet",
+        [2] = workspace.Farm.Farm.Important.Objects_Physical.PetEgg
+    }
+    
+    local success = pcall(function()
+        game:GetService("ReplicatedStorage").GameEvents.PetEggService:FireServer(unpack(args))
+    end)
+    
+    if success then
+        print("✅ Hatch enviado")
+        return true
+    else
+        print("❌ Error al hacer hatch")
+        return false
+    end
+end
+
+-- Función para detectar peso (EXACTA como la tuya)
+local function getPetWeight(petName)
+    local weightPattern = "%[(%d+%.?%d*) KG%]"
+    local weight = petName:match(weightPattern)
+    return weight and tonumber(weight) or 0
+end
+
+-- Función para detectar favoritos (EXACTA como la tuya que funciona)
+local function isPetFavorited(tool)
+    local attributes = {"Favorited", "IsFavorite", "Starred", "IsFav", "Fav", "Favorite", "Star"}
+    for _, attr in pairs(attributes) do
+        if tool:GetAttribute(attr) then
+            return true
+        end
+    end
+    
+    local handle = tool:FindFirstChild("Handle")
+    if handle then
+        for _, attr in pairs(attributes) do
+            if handle:GetAttribute(attr) then
+                return true
+            end
+        end
+        
+        for _, child in pairs(handle:GetDescendants()) do
+            local name = child.Name:lower()
+            if name:find("favorite") or name:find("star") or name:find("fav") then
+                if child:IsA("BillboardGui") or child:IsA("SurfaceGui") then
+                    if child.Enabled and child.Visible then
+                        return true
+                    end
+                elseif child:IsA("ImageLabel") or child:IsA("TextLabel") then
+                    if child.Visible then
+                        return true
+                    end
                 end
             end
         end
     end
     
+    local toolName = tool.Name:lower()
+    if toolName:find("⭐") or toolName:find("★") or toolName:find("fav") then
+        return true
+    end
+    
+    if tool:FindFirstChild("FavoriteIcon") or tool:FindFirstChild("StarIcon") or tool:FindFirstChild("Favorite") then
+        return true
+    end
+    
     return false
 end
 
--- Función simple para hacer hatch
-local function hatchEggs()
-    print("🥚 Intentando hacer hatch...")
-    local farm = workspace:FindFirstChild("Farm")
-    if farm then
-        for _, descendant in pairs(farm:GetDescendants()) do
-            if descendant.Name:lower():find("egg") and descendant:IsA("Model") then
-                local args = {
-                    [1] = "HatchPet",
-                    [2] = descendant
-                }
-                
-                pcall(function()
-                    PetEggService:FireServer(unpack(args))
-                end)
-                
-                print("✅ Hatch enviado")
-                return true
+-- Función para vender pets (EXACTA como la tuya que funciona)
+local function sellSpecificPets()
+    local character = LocalPlayer.Character
+    local backpack = LocalPlayer:WaitForChild("Backpack")
+    if not character or not backpack then return 0 end
+    
+    local petsSold = 0
+    local petsToSell = {
+        "Scarlet Macaw", "Blue Jay", "Cardinal", "Robin", "Sparrow",
+        "Canary", "Gorilla", "Toucan"
+    }
+    
+    -- Buscar SOLO UNA pet en backpack por ciclo
+    for _, tool in pairs(backpack:GetChildren()) do
+        if tool:IsA("Tool") and petsSold == 0 then
+            for _, petType in pairs(petsToSell) do
+                if tool.Name:find(petType) then
+                    local weight = getPetWeight(tool.Name)
+                    if isPetFavorited(tool) then
+                        -- No vender favoritos
+                    elseif weight < 2.4 and weight > 0 then
+                        local humanoid = character:FindFirstChildOfClass("Humanoid")
+                        if humanoid then
+                            humanoid:UnequipTools()
+                            task.wait(0.5)
+                            humanoid:EquipTool(tool)
+                            task.wait(1)
+                            local args = { [1] = character:FindFirstChild(tool.Name) }
+                            if args[1] then
+                                RS.GameEvents.SellPet_RE:FireServer(unpack(args))
+                                petsSold = petsSold + 1
+                                print("💰 Pet vendida: " .. tool.Name)
+                                task.wait(2)
+                                return petsSold
+                            end
+                        end
+                    end
+                    break
+                end
             end
         end
     end
-    return false
+    
+    if petsSold == 0 then
+        for _, tool in pairs(character:GetChildren()) do
+            if tool:IsA("Tool") then
+                for _, petType in pairs(petsToSell) do
+                    if tool.Name:find(petType) then
+                        local weight = getPetWeight(tool.Name)
+                        if isPetFavorited(tool) then
+                            -- No vender favoritos equipados
+                        elseif weight < 2.4 and weight > 0 then
+                            local args = { [1] = tool }
+                            RS.GameEvents.SellPet_RE:FireServer(unpack(args))
+                            petsSold = petsSold + 1
+                            print("💰 Pet vendida: " .. tool.Name)
+                            task.wait(2)
+                            return petsSold
+                        end
+                        break
+                    end
+                end
+            end
+        end
+    end
+    
+    if petsSold > 0 then
+        RS.GameEvents.SaveSlotService.RememberUnlockage:FireServer()
+    end
+    return petsSold
 end
 
 -- Función simple para colocar huevos
@@ -88,7 +240,6 @@ local function placeEggs()
     local backpack = LocalPlayer:WaitForChild("Backpack")
     if not character or not backpack then return false end
     
-    -- Buscar Common Egg
     local commonEgg = nil
     for _, tool in pairs(backpack:GetChildren()) do
         if tool:IsA("Tool") and tool.Name:find("Common Egg") then
@@ -102,7 +253,6 @@ local function placeEggs()
         return false
     end
     
-    -- Equipar huevo
     local humanoid = character:FindFirstChildOfClass("Humanoid")
     if humanoid then
         humanoid:UnequipTools()
@@ -110,7 +260,6 @@ local function placeEggs()
         humanoid:EquipTool(commonEgg)
         task.wait(0.5)
         
-        -- Colocar en posición aleatoria
         local baseX = 10.392221450805664
         local baseY = 0.13552704453468323
         local baseZ = -100.19296264648438
@@ -134,127 +283,46 @@ local function placeEggs()
     return false
 end
 
--- Función para detectar peso de pets
-local function getPetWeight(petName)
-    local weightPattern = "%[(%d+%.?%d*) KG%]"
-    local weight = petName:match(weightPattern)
-    return weight and tonumber(weight) or 0
-end
-
--- Función para detectar favoritos
-local function isPetFavorited(tool)
-    local attributes = {"Favorited", "IsFavorite", "Starred", "IsFav", "Fav"}
-    for _, attr in pairs(attributes) do
-        if tool:GetAttribute(attr) then
-            return true
-        end
-    end
-    
-    if tool.Name:find("⭐") or tool.Name:find("★") then
-        return true
-    end
-    
-    return false
-end
-
--- Lista de pets para vender
-local petsToSell = {
-    "Scarlet Macaw", "Ostrich", "Peacock", "Capybara", "Sparrow",
-    "Canary", "Gorilla", "Toucan", "Dog", "Golden Lab", "Bunny"
-}
-
--- Función simple para vender pets
-local function sellPets()
-    local character = LocalPlayer.Character
-    local backpack = LocalPlayer:WaitForChild("Backpack")
-    if not character or not backpack then return false end
-    
-    -- Buscar en backpack
-    for _, tool in pairs(backpack:GetChildren()) do
-        if tool:IsA("Tool") then
-            for _, petType in pairs(petsToSell) do
-                if tool.Name:find(petType) then
-                    local weight = getPetWeight(tool.Name)
-                    if not isPetFavorited(tool) and weight < 2.40 and weight > 0 then
-                        local humanoid = character:FindFirstChildOfClass("Humanoid")
-                        if humanoid then
-                            humanoid:UnequipTools()
-                            task.wait(0.3)
-                            humanoid:EquipTool(tool)
-                            task.wait(0.5)
-                            
-                            local equippedTool = character:FindFirstChild(tool.Name)
-                            if equippedTool then
-                                local args = { [1] = equippedTool }
-                                pcall(function()
-                                    RS.GameEvents.SellPet_RE:FireServer(unpack(args))
-                                end)
-                                print("💰 Pet vendida: " .. tool.Name)
-                                return true
-                            end
-                        end
-                    end
-                    break
-                end
-            end
-        end
-    end
-    
-    return false
-end
-
--- Función para verificar si hay pets para vender
-local function hasPetsToSell()
-    local character = LocalPlayer.Character
-    local backpack = LocalPlayer:WaitForChild("Backpack")
-    if not character or not backpack then return false end
-    
-    for _, tool in pairs(backpack:GetChildren()) do
-        if tool:IsA("Tool") then
-            for _, petType in pairs(petsToSell) do
-                if tool.Name:find(petType) then
-                    local weight = getPetWeight(tool.Name)
-                    if not isPetFavorited(tool) and weight < 2.40 and weight > 0 then
-                        return true
-                    end
-                end
-            end
-        end
-    end
-    
-    return false
-end
-
--- LOOP PRINCIPAL SIMPLIFICADO
+-- LOOP PRINCIPAL SIMPLE - Como tus scripts que funcionan
 local function mainLoop()
     print("🔄 Iniciando loop principal...")
     
     while true do
-        pcall(function()
-            -- Prioridad 1: Huevos listos
-            if checkEggsReady() then
-                print("🥚 Huevos listos detectados!")
-                switchToLoadout(3)
-                hatchEggs()
-                task.wait(2)
-                
-            -- Prioridad 2: Vender pets
-            elseif hasPetsToSell() then
-                print("💰 Pets para vender detectadas!")
-                switchToLoadout(2)
-                sellPets()
-                task.wait(1)
-                
-            -- Prioridad 3: Colocar huevos
-            else
-                print("📦 Colocando huevos...")
-                switchToLoadout(1)
-                placeEggs()
-                task.wait(1)
-            end
-        end)
+        local currentTime = tick()
         
-        task.wait(3) -- Pausa entre ciclos
+        -- Verificar huevos listos cada 5 segundos
+        if currentTime - lastEggCheck > 5 then
+            lastEggCheck = currentTime
+            
+            if checkEggsReady() then
+                print("🥚 ¡Huevos detectados listos para hatch!")
+                switchToLoadout3() -- Cambiar al SLOT 3 para hacer hatch
+                print("✅ Loadout cambiado a 3 - Listo para hatch")
+                task.wait(1) -- Esperar a que se aplique el cambio
+                hatchEggs() -- HACER HATCH con los args correctos
+                task.wait(30) -- Esperar como en tu script original
+            end
+        end
+        
+        -- Vender pets cada 10 segundos
+        if currentTime - lastSellCheck > 10 then
+            lastSellCheck = currentTime
+            switchToLoadout2()
+            local sold = sellSpecificPets()
+            if sold > 0 then
+                task.wait(15) -- Espera después de vender
+            end
+        end
+        
+        -- Colocar huevos cada 15 segundos
+        if currentTime - lastPlaceCheck > 15 then
+            lastPlaceCheck = currentTime
+            switchToLoadout1()
+            placeEggs()
+            task.wait(2)
+        end
+        
+        task.wait(1) -- Pausa general
     end
 end
 
