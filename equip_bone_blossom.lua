@@ -66,7 +66,7 @@ local function sellSpecificPets()
         "Scarlet Macaw",
         "Blue Jay", 
         "Cardinal",
-        "Robin",
+        "Squirrel",
         "Toucan",
         "Canary",
         "Gorilla",
@@ -81,7 +81,7 @@ local function sellSpecificPets()
                     local weight = getPetWeight(tool.Name)
                     if isPetFavorited(tool) then
                         -- No vender favoritos
-                    elseif weight < 7 and weight > 0 then
+                    elseif weight < 2.40 and weight > 0 then
                         local humanoid = character:FindFirstChildOfClass("Humanoid")
                         if humanoid then
                             humanoid:UnequipTools()
@@ -114,7 +114,7 @@ local function sellSpecificPets()
                         local weight = getPetWeight(tool.Name)
                         if isPetFavorited(tool) then
                             -- No vender favoritos equipados
-                        elseif weight < 4 and weight > 0 then
+                        elseif weight < 2.40 and weight > 0 then
                             local args = {
                                 [1] = tool
                             }
