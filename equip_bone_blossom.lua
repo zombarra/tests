@@ -96,6 +96,32 @@ end
 
 -- Función para colocar huevos
 local function placeEggs()
+    local character = LocalPlayer.Character
+    local backpack = LocalPlayer:WaitForChild("Backpack")
+    if not character or not backpack then return false end
+    
+    -- Buscar "Common Egg" en la backpack
+    local commonEgg = nil
+    for _, tool in pairs(backpack:GetChildren()) do
+        if tool:IsA("Tool") and tool.Name:find("Common Egg") then
+            commonEgg = tool
+            break
+        end
+    end
+    
+    if not commonEgg then
+        return false -- No hay Common Egg disponible
+    end
+    
+    -- Equipar el Common Egg
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if not humanoid then return false end
+    
+    humanoid:UnequipTools()
+    task.wait(0.3)
+    humanoid:EquipTool(commonEgg)
+    task.wait(0.5)
+    
     -- Posición base
     local baseX = 10.392221450805664
     local baseY = 0.13552704453468323
