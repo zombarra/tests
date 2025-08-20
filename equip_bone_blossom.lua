@@ -1,126 +1,118 @@
+
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RS = game:GetService("ReplicatedStorage")
 local LocalPlayer = Players.LocalPlayer
-local Backpack = LocalPlayer:WaitForChild("Backpack")
-local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-
-function getNil(name,class) 
-    for _,v in pairs(getnilinstances()) do 
-        if v.ClassName==class and v.Name==name then 
-            return v
-        end 
-    end 
-    return nil -- Explícitamente retornar nil si no se encuentra
+local function getPetWeight(petName)
+    local weightPattern = "%[(%d+%.?%d*) KG%]"
+    local weight = petName:match(weightPattern)
+    return weight and tonumber(weight) or 0
 end
-
--- Variable para controlar el skip cooking
-local skipCooking = true
-
--- Función para recolectar plantas específicas del mundo
-local function collectPlantFromWorld(plantName)
-    local success, err = pcall(function()
-        if plantName == "Bone Blossom" then
-            -- Usar getNil para encontrar Bone Blossom
-            local plantModel = getNil("Bone Blossom", "Model")
-            if plantModel then
-                local args = {
-                    [1] = {
-                        [1] = plantModel
-                    }
-                }
-                game:GetService("ReplicatedStorage").GameEvents.Crops.Collect:FireServer(unpack(args))
-                print("Recolectando Bone Blossom usando getNil...")
-            else
-                print("No se encontró Bone Blossom en el mundo")
-            end
-        elseif plantName == "Tomato" then
-            -- Usar getNil para encontrar Tomato
-            local plantModel = getNil("Tomato", "Model")
-            if plantModel then
-                local args = {
-                    [1] = {
-                        [1] = plantModel
-                    }
-                }
-                game:GetService("ReplicatedStorage").GameEvents.Crops.Collect:FireServer(unpack(args))
-                print("Recolectando Tomato usando getNil...")
-            else
-                print("No se encontró Tomato en el mundo")
-            end
-        end
-    end)
-    if not success then
-        warn("Error recolectando " .. plantName .. ": " .. tostring(err))
+local function isPetFavorited(tool)
+    if tool:GetAttribute("Favorited") or tool:GetAttribute("IsFavorite") or tool:GetAttribute("Starred") then
+        return true
     end
-end
--- Función para equipar y submitir planta
-local function equipAndSubmitPlant(plantName, times)
-    for i = 1, times do
-        print("Buscando " .. plantName .. " (" .. i .. "/" .. times .. ")")
-        local plantFound = false
-        -- Buscar hasta encontrar la planta especificada (sin límite de intentos)
-        while not plantFound do
-            -- Buscar en el inventario
-            for _, tool in ipairs(Backpack:GetChildren()) do
-                if tool:IsA("Tool") and tool:GetAttribute("f") == plantName and not tool:GetAttribute("Seed") then
-                    -- Desequipar cualquier herramienta actual
-                    for _, t in ipairs(Character:GetChildren()) do
-                        if t:IsA("Tool") then
-                            t.Parent = Backpack
-                        end
+    local handle = tool:FindFirstChild("Handle")
+    if handle then
+        local gui = handle:FindFirstChildOfClass("BillboardGui") or handle:FindFirstChildOfClass("SurfaceGui")
+        if gui then
+            for _, child in pairs(gui:GetDescendants()) do
+                if child:IsA("ImageLabel") then
+                    local image = child.Image:lower()
+                    if image:find("star") or image:find("heart") or image:find("favorite") then
+                        return true
                     end
-                    
-                    -- Equipar la planta encontrada
-                    tool.Parent = Character
-                    task.wait(0.3)
-                    
-                    -- Ejecutar SubmitHeldPlant
-                    local args = {
-                        [1] = "SubmitHeldPlant"
-                    }
-                    game:GetService("ReplicatedStorage").GameEvents.CookingPotService_RE:FireServer(unpack(args))
-                    task.wait(0.5)
-                    plantFound = true
-                    print(plantName .. " enviado exitosamente!")
-                    break
+                end
+                if child:IsA("TextLabel") then
+                    local text = child.Text:lower()
+                    if text:find("★") or text:find("♥") or text:find("fav") then
+                        return true
+                    end
                 end
             end
-            if not plantFound then
-                print("No se encontró " .. plantName .. " en inventario, intentando recolectar...")
-                collectPlantFromWorld(plantName)
-                task.wait(2) -- Esperar 2 segundos antes de buscar nuevamente
+        end
+    end
+    if tool:FindFirstChild("FavoriteIcon") or tool:FindFirstChild("StarIcon") then
+        return true
+    end
+    return false
+end
+local function sellSpecificPets()
+    local character = LocalPlayer.Character
+    local backpack = LocalPlayer:WaitForChild("Backpack")
+    if not character or not backpack then return end
+    local petsFound = 0
+    local petsSold = 0
+    local petsToSell = {
+        "Scarlet Macaw",
+        "Blue Jay",
+        "Cardinal",
+        "Robin",
+        "Sparrow",
+        "Canary",
+        "Gorilla",
+        "Finch"
+    }
+    for _, tool in pairs(backpack:GetChildren()) do
+        if tool:IsA("Tool") then
+            for _, petType in pairs(petsToSell) do
+                if tool.Name:find(petType) then
+                    petsFound = petsFound + 1
+                    local weight = getPetWeight(tool.Name)
+                    if isPetFavorited(tool) then
+                    elseif weight < 4 and weight > 0 then
+                        local humanoid = character:FindFirstChildOfClass("Humanoid")
+                        if humanoid then
+                            humanoid:UnequipTools()
+                            task.wait(0.1)
+                            humanoid:EquipTool(tool)
+                            task.wait(0.3)
+                            local args = {
+                                [1] = character:FindFirstChild(tool.Name)
+                            }
+                            if args[1] then
+                                RS.GameEvents.SellPet_RE:FireServer(unpack(args))
+                                petsSold = petsSold + 1
+                                task.wait(0.5)
+                            end
+                        end
+                    end
+                    end
+                end
             end
         end
     end
+    for _, tool in pairs(character:GetChildren()) do
+        if tool:IsA("Tool") then
+            for _, petType in pairs(petsToSell) do
+                if tool.Name:find(petType) then
+                    petsFound = petsFound + 1
+                    local weight = getPetWeight(tool.Name)
+                    if isPetFavorited(tool) then
+                    elseif weight < 4 and weight > 0 then
+                        local args = {
+                            [1] = tool
+                        }
+                        RS.GameEvents.SellPet_RE:FireServer(unpack(args))
+                        petsSold = petsSold + 1
+                        task.wait(0.5)
+                    end
+                end
+            end
+        end
+    end
+    if petsSold > 0 then
+        RS.GameEvents.SaveSlotService.RememberUnlockage:FireServer()
+    end
+    return petsSold
 end
-
-
--- Iniciar la función de obtener comida constantemente
-getFoodFromPotConstantly()
-
-local iteration = 1
-while true do
-    print("Iniciando iteración #" .. iteration)
-    print("Equipando Bone Blossom...")
-    equipAndSubmitPlant("Bone Blossom", 4)
-    print("Equipando Coconut...")
-    equipAndSubmitPlant("Tomato", 1)
-
-    print("Ejecutando CookBest...")
-    task.wait(0.5)
-    local args = {
-        [1] = "CookBest"
-    }
-    game:GetService("ReplicatedStorage").GameEvents.CookingPotService_RE:FireServer(unpack(args))
-    
-    -- También ejecutar GetFoodFromPot aquí por si acaso
-    local getFoodArgs = {
-        [1] = "GetFoodFromPot"
-    }
-    game:GetService("ReplicatedStorage").GameEvents.CookingPotService_RE:FireServer(unpack(getFoodArgs))
-    
-    print("Iteración #" .. iteration .. " completada. Esperando antes de la siguiente...")
-    iteration = iteration + 1
-    
-    task.wait(2)
+local function autoSellLoop()
+    while true do
+        local sold = sellSpecificPets()
+        if sold > 0 then
+            task.wait(5)
+        else
+            task.wait(10)
+        end
+    end
 end
+autoSellLoop()
