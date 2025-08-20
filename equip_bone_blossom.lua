@@ -9,7 +9,7 @@ local function getPetWeight(petName)
 end
 local function isPetFavorited(tool)
     -- Método 1: Verificar todos los atributos posibles
-    local attributes = {"Favorited", "IsFavorite", "Starred", "IsFav", "Fav", "Favorite", "Star"}
+    local attributes = {"favorited", "IsFavorite", "Starred", "IsFav", "Fav", "Favorite", "Star"}
     for _, attr in pairs(attributes) do
         if tool:GetAttribute(attr) then
             return true
@@ -29,7 +29,7 @@ local function isPetFavorited(tool)
         -- Buscar cualquier GUI relacionado con favoritos
         for _, child in pairs(handle:GetDescendants()) do
             local name = child.Name:lower()
-            if name:find("favorite") or name:find("star") or name:find("fav") then
+            if name:find("favorited") or name:find("star") or name:find("fav") then
                 if child:IsA("BillboardGui") or child:IsA("SurfaceGui") then
                     if child.Enabled and child.Visible then
                         return true
