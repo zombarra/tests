@@ -60,7 +60,7 @@ local function sellSpecificPets()
         "Sparrow",
         "Canary",
         "Gorilla",
-        "Toucan"
+        "Finch"
     }
     for _, tool in pairs(backpack:GetChildren()) do
         if tool:IsA("Tool") then
@@ -69,7 +69,8 @@ local function sellSpecificPets()
                     petsFound = petsFound + 1
                     local weight = getPetWeight(tool.Name)
                     if isPetFavorited(tool) then
-                    elseif weight < 7 and weight > 0 then
+                        -- No vender favoritos
+                    elseif weight < 4 and weight > 0 then
                         local humanoid = character:FindFirstChildOfClass("Humanoid")
                         if humanoid then
                             humanoid:UnequipTools()
@@ -86,11 +87,11 @@ local function sellSpecificPets()
                             end
                         end
                     end
-                    end
                 end
             end
         end
     end
+    -- Buscar en Character también
     for _, tool in pairs(character:GetChildren()) do
         if tool:IsA("Tool") then
             for _, petType in pairs(petsToSell) do
