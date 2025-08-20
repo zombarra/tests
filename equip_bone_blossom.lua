@@ -46,6 +46,7 @@ end
 
 -- Función para detectar huevos listos para hatch
 local function checkEggsReady()
+    -- Método 1: Usar el RemoteEvent que funciona
     local success = pcall(function()
         ModelService.EggReadyToHatch_RE:FireServer()
     end)
@@ -54,44 +55,66 @@ local function checkEggsReady()
         return true
     end
     
-    -- Buscar huevos en workspace con indicadores visuales
-    local farm = workspace:FindFirstChild("Farm")
-    if farm then
-        for _, descendant in pairs(farm:GetDescendants()) do
-            if descendant.Name:lower():find("egg") then
-                local gui = descendant:FindFirstChildOfClass("BillboardGui")
-                if gui then
-                    local textLabel = gui:FindFirstChildOfClass("TextLabel")
-                    if textLabel then
-                        local text = textLabel.Text:lower()
-                        if text:find("ready") or text:find("hatch") or text:find("!") then
-                            return true
+    -- Método 2: Buscar huevos en workspace con indicadores visuales
+    local function findReadyEggs()
+        local readyEggs = 0
+        
+        -- Buscar en Farm
+        local farm = workspace:FindFirstChild("Farm")
+        if farm then
+            for _, descendant in pairs(farm:GetDescendants()) do
+                if descendant.Name:lower():find("egg") then
+                    -- Verificar si tiene indicadores de "ready"
+                    local gui = descendant:FindFirstChildOfClass("BillboardGui")
+                    if gui then
+                        local textLabel = gui:FindFirstChildOfClass("TextLabel")
+                        if textLabel then
+                            local text = textLabel.Text:lower()
+                            if text:find("ready") or text:find("hatch") or text:find("!") then
+                                readyEggs = readyEggs + 1
+                            end
                         end
                     end
+                    
+                    -- Verificar atributos
+                    if descendant:GetAttribute("ReadyToHatch") or descendant:GetAttribute("CanHatch") then
+                        readyEggs = readyEggs + 1
+                    end
                 end
-                
-                if descendant:GetAttribute("ReadyToHatch") or descendant:GetAttribute("CanHatch") then
-                    return true
-                end
+            end
+        end
+        
+        return readyEggs > 0
+    end
+    
+    return findReadyEggs()
+end
+
+-- Función para hacer hatch de huevos
+local function hatchEggs()
+    -- Buscar huevos en el workspace
+    local farm = workspace:FindFirstChild("Farm")
+    if not farm then return false end
+    
+    -- Buscar cualquier huevo disponible
+    for _, descendant in pairs(farm:GetDescendants()) do
+        if descendant.Name:lower():find("egg") and descendant:IsA("Model") then
+            local args = {
+                [1] = "HatchPet",
+                [2] = descendant
+            }
+            
+            local success = pcall(function()
+                PetEggService:FireServer(unpack(args))
+            end)
+            
+            if success then
+                return true
             end
         end
     end
     
     return false
-end
-
--- Función para hacer hatch de huevos
-local function hatchEggs()
-    local args = {
-        [1] = "HatchPet",
-        [2] = workspace.Farm.Farm.Important.Objects_Physical.PetEgg
-    }
-    
-    local success = pcall(function()
-        PetEggService:FireServer(unpack(args))
-    end)
-    
-    return success
 end
 
 -- Función para colocar huevos
@@ -263,35 +286,46 @@ end
 
 -- Loop principal del bot
 local function mainLoop()
+    print("Bot iniciado - Auto Farm") -- Debug
+    
     while true do
-        -- Prioridad 1: Si hay huevos listos → Hatch (Slot 3)
-        if checkEggsReady() then
-            if currentState ~= STATE.HATCHING then
-                currentState = STATE.HATCHING
-                switchToLoadout(3)
-            end
-            hatchEggs()
-            task.wait(0.5)
-            
-        -- Prioridad 2: Si hay pets para vender → Sell (Slot 2)
-        elseif hasPetsToSell() then
-            if currentState ~= STATE.SELLING then
-                currentState = STATE.SELLING
-                switchToLoadout(2)
-            end
-            if sellPets() then
-                RS.GameEvents.SaveSlotService.RememberUnlockage:FireServer()
-            end
-            task.wait(0.5)
+        local success, error = pcall(function()
+            -- Prioridad 1: Si hay huevos listos → Hatch (Slot 3)
+            if checkEggsReady() then
+                print("Huevos listos detectados") -- Debug
+                if currentState ~= STATE.HATCHING then
+                    currentState = STATE.HATCHING
+                    switchToLoadout(3)
+                end
+                hatchEggs()
+                task.wait(0.5)
+                
+            -- Prioridad 2: Si hay pets para vender → Sell (Slot 2)
+            elseif hasPetsToSell() then
+                print("Pets para vender detectadas") -- Debug
+                if currentState ~= STATE.SELLING then
+                    currentState = STATE.SELLING
+                    switchToLoadout(2)
+                end
+                if sellPets() then
+                    RS.GameEvents.SaveSlotService.RememberUnlockage:FireServer()
+                end
+                task.wait(0.5)
 
-        -- Prioridad 3: Colocar huevos → Place (Slot 1)
-        else
-            if currentState ~= STATE.PLACING then
-                currentState = STATE.PLACING
-                switchToLoadout(1)
+            -- Prioridad 3: Colocar huevos → Place (Slot 1)
+            else
+                print("Colocando huevos") -- Debug
+                if currentState ~= STATE.PLACING then
+                    currentState = STATE.PLACING
+                    switchToLoadout(1)
+                end
+                placeEggs()
+                task.wait(0.5)
             end
-            placeEggs()
-            task.wait(0.5)
+        end)
+        
+        if not success then
+            print("Error en el bot:", error) -- Debug de errores
         end
         
         task.wait(1) -- Espera general entre ciclos
