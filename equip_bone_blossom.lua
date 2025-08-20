@@ -60,7 +60,7 @@ local function sellSpecificPets()
         "Sparrow",
         "Canary",
         "Gorilla",
-        "Toucan"
+        "Finch"
     }
     
     -- Buscar en backpack
