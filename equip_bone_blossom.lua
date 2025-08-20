@@ -72,7 +72,7 @@ local function sellSpecificPets()
                     -- Verificar favoritos antes de vender
                     if isPetFavorited(tool) then
                         -- No vender favoritos
-                    elseif weight < 4 and weight > 0 then
+                    elseif weight < 5 and weight > 0 then
                         local humanoid = character:FindFirstChildOfClass("Humanoid")
                         if humanoid then
                             humanoid:UnequipTools()
