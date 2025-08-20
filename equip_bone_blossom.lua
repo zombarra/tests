@@ -8,39 +8,49 @@ local function getPetWeight(petName)
     return weight and tonumber(weight) or 0
 end
 local function isPetFavorited(tool)
-    -- Método más directo basado en cómo funciona el sistema de favoritos
-    
-    -- Verificar atributos que el juego probablemente usa
-    if tool:GetAttribute("Favorited") == true then
-        return true
-    end
-    
-    if tool:GetAttribute("IsFavorite") == true then
-        return true
-    end
-    
-    -- Verificar si el tool tiene algún indicador visual
-    local handle = tool:FindFirstChild("Handle")
-    if handle then
-        -- Buscar GUI específico de favoritos
-        local favoriteGui = handle:FindFirstChild("FavoriteGui") or handle:FindFirstChild("StarGui")
-        if favoriteGui and favoriteGui.Visible then
+    -- Método 1: Verificar todos los atributos posibles
+    local attributes = {"Favorited", "IsFavorite", "Starred", "IsFav", "Fav", "Favorite", "Star"}
+    for _, attr in pairs(attributes) do
+        if tool:GetAttribute(attr) then
             return true
         end
+    end
+    
+    -- Método 2: Verificar en el Handle
+    local handle = tool:FindFirstChild("Handle")
+    if handle then
+        -- Verificar atributos del handle también
+        for _, attr in pairs(attributes) do
+            if handle:GetAttribute(attr) then
+                return true
+            end
+        end
         
-        -- Buscar imágenes de estrella visible
-        for _, gui in pairs(handle:GetChildren()) do
-            if gui:IsA("BillboardGui") and gui.Enabled then
-                local star = gui:FindFirstChild("Star") or gui:FindFirstChild("Favorite")
-                if star and star.Visible then
-                    return true
+        -- Buscar cualquier GUI relacionado con favoritos
+        for _, child in pairs(handle:GetDescendants()) do
+            local name = child.Name:lower()
+            if name:find("favorite") or name:find("star") or name:find("fav") then
+                if child:IsA("BillboardGui") or child:IsA("SurfaceGui") then
+                    if child.Enabled and child.Visible then
+                        return true
+                    end
+                elseif child:IsA("ImageLabel") or child:IsA("TextLabel") then
+                    if child.Visible then
+                        return true
+                    end
                 end
             end
         end
     end
     
-    -- Método alternativo: verificar si el nombre del tool contiene algún indicador
-    if tool.Name:find("⭐") or tool.Name:find("★") then
+    -- Método 3: Verificar el nombre del tool
+    local toolName = tool.Name:lower()
+    if toolName:find("⭐") or toolName:find("★") or toolName:find("fav") then
+        return true
+    end
+    
+    -- Método 4: Verificar si el tool tiene propiedades especiales
+    if tool:FindFirstChild("FavoriteIcon") or tool:FindFirstChild("StarIcon") or tool:FindFirstChild("Favorite") then
         return true
     end
     
@@ -60,32 +70,32 @@ local function sellSpecificPets()
         "Sparrow",
         "Canary",
         "Gorilla",
-        "Finch"
+        "Toucan"
     }
     
-    -- Buscar en backpack
+    -- Buscar SOLO UNA pet en backpack por ciclo
     for _, tool in pairs(backpack:GetChildren()) do
-        if tool:IsA("Tool") then
+        if tool:IsA("Tool") and petsSold == 0 then -- Solo vender 1 por ciclo
             for _, petType in pairs(petsToSell) do
                 if tool.Name:find(petType) then
                     local weight = getPetWeight(tool.Name)
-                    -- Verificar favoritos antes de vender
                     if isPetFavorited(tool) then
                         -- No vender favoritos
-                    elseif weight < 5 and weight > 0 then
+                    elseif weight < 7 and weight > 0 then
                         local humanoid = character:FindFirstChildOfClass("Humanoid")
                         if humanoid then
                             humanoid:UnequipTools()
-                            task.wait(0.1)
+                            task.wait(0.5) -- Espera más larga
                             humanoid:EquipTool(tool)
-                            task.wait(0.3)
+                            task.wait(1) -- Espera más larga
                             local args = {
                                 [1] = character:FindFirstChild(tool.Name)
                             }
                             if args[1] then
                                 RS.GameEvents.SellPet_RE:FireServer(unpack(args))
                                 petsSold = petsSold + 1
-                                task.wait(0.5)
+                                task.wait(2) -- Espera larga después de vender
+                                return petsSold -- Salir inmediatamente
                             end
                         end
                     end
@@ -95,23 +105,26 @@ local function sellSpecificPets()
         end
     end
     
-    -- Buscar en character
-    for _, tool in pairs(character:GetChildren()) do
-        if tool:IsA("Tool") then
-            for _, petType in pairs(petsToSell) do
-                if tool.Name:find(petType) then
-                    local weight = getPetWeight(tool.Name)
-                    if isPetFavorited(tool) then
-                        -- No vender favoritos equipados
-                    elseif weight < 5 and weight > 0 then
-                        local args = {
-                            [1] = tool
-                        }
-                        RS.GameEvents.SellPet_RE:FireServer(unpack(args))
-                        petsSold = petsSold + 1
-                        task.wait(0.5)
+    -- Buscar SOLO UNA pet en character por ciclo (solo si no vendió en backpack)
+    if petsSold == 0 then
+        for _, tool in pairs(character:GetChildren()) do
+            if tool:IsA("Tool") then
+                for _, petType in pairs(petsToSell) do
+                    if tool.Name:find(petType) then
+                        local weight = getPetWeight(tool.Name)
+                        if isPetFavorited(tool) then
+                            -- No vender favoritos equipados
+                        elseif weight < 4 and weight > 0 then
+                            local args = {
+                                [1] = tool
+                            }
+                            RS.GameEvents.SellPet_RE:FireServer(unpack(args))
+                            petsSold = petsSold + 1
+                            task.wait(2) -- Espera larga
+                            return petsSold -- Salir inmediatamente
+                        end
+                        break
                     end
-                    break
                 end
             end
         end
@@ -127,9 +140,9 @@ local function autoSellLoop()
     while true do
         local sold = sellSpecificPets()
         if sold > 0 then
-            task.wait(5)
+            task.wait(15) -- Espera 15 segundos después de vender
         else
-            task.wait(10)
+            task.wait(10) -- Espera 10 segundos si no vendió nada
         end
     end
 end
