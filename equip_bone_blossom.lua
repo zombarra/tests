@@ -69,7 +69,7 @@ local function sellSpecificPets()
                     petsFound = petsFound + 1
                     local weight = getPetWeight(tool.Name)
                     if isPetFavorited(tool) then
-                    elseif weight < 4 and weight > 0 then
+                    elseif weight < 7 and weight > 0 then
                         local humanoid = character:FindFirstChildOfClass("Humanoid")
                         if humanoid then
                             humanoid:UnequipTools()
