@@ -67,7 +67,7 @@ local function sellSpecificPets()
         "Blue Jay", 
         "Cardinal",
         "Robin",
-        "Sparrow",
+        "Toucan",
         "Canary",
         "Gorilla",
         "Toucan"
