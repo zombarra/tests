@@ -60,7 +60,7 @@ local function sellSpecificPets()
         "Sparrow",
         "Canary",
         "Gorilla",
-        "Finch"
+        "Toucan"
     }
     for _, tool in pairs(backpack:GetChildren()) do
         if tool:IsA("Tool") then
