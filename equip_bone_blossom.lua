@@ -65,7 +65,7 @@ local function sellSpecificPets()
     local petsToSell = {
         "Scarlet Macaw",
         "Blue Jay", 
-        "Cardinal",
+        "Moon Cat",
         "Squirrel",
         "Toucan",
         "Canary",
