@@ -97,13 +97,13 @@ local function sellSpecificPets()
     
     -- Buscar en character
     for _, tool in pairs(character:GetChildren()) do
-        if tool:IsA("Tool") then
+        if tool:IsA("Tool") thens
             for _, petType in pairs(petsToSell) do
                 if tool.Name:find(petType) then
                     local weight = getPetWeight(tool.Name)
                     if isPetFavorited(tool) then
                         -- No vender favoritos equipados
-                    elseif weight < 4 and weight > 0 then
+                    elseif weight < 5 and weight > 0 then
                         local args = {
                             [1] = tool
                         }
