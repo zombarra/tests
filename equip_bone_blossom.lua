@@ -8,32 +8,42 @@ local function getPetWeight(petName)
     return weight and tonumber(weight) or 0
 end
 local function isPetFavorited(tool)
+    -- Verificar si la pet está marcada como favorita
+    -- Basado en el RemoteEvent Favorite_Item que usa el juego
+    
+    -- Método 1: Atributos comunes de favoritos
     if tool:GetAttribute("Favorited") or tool:GetAttribute("IsFavorite") or tool:GetAttribute("Starred") then
         return true
     end
+    
+    -- Método 2: Verificar si hay un indicador visual de favorito
     local handle = tool:FindFirstChild("Handle")
     if handle then
-        local gui = handle:FindFirstChildOfClass("BillboardGui") or handle:FindFirstChildOfClass("SurfaceGui")
-        if gui then
-            for _, child in pairs(gui:GetDescendants()) do
-                if child:IsA("ImageLabel") then
-                    local image = child.Image:lower()
-                    if image:find("star") or image:find("heart") or image:find("favorite") then
-                        return true
-                    end
+        -- Buscar GUI de favorito
+        for _, gui in pairs(handle:GetChildren()) do
+            if gui:IsA("BillboardGui") or gui:IsA("SurfaceGui") then
+                if gui.Name:lower():find("favorite") or gui.Name:lower():find("star") then
+                    return true
                 end
-                if child:IsA("TextLabel") then
-                    local text = child.Text:lower()
-                    if text:find("★") or text:find("♥") or text:find("fav") then
-                        return true
+                
+                -- Verificar contenido del GUI
+                for _, child in pairs(gui:GetDescendants()) do
+                    if child:IsA("ImageLabel") then
+                        local image = child.Image:lower()
+                        if image:find("star") or image:find("favorite") then
+                            return true
+                        end
                     end
                 end
             end
         end
     end
-    if tool:FindFirstChild("FavoriteIcon") or tool:FindFirstChild("StarIcon") then
+    
+    -- Método 3: Verificar atributos específicos del sistema de favoritos
+    if tool:GetAttribute("IsFav") or tool:GetAttribute("Fav") then
         return true
     end
+    
     return false
 end
 local function sellSpecificPets()
